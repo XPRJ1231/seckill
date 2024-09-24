@@ -10,54 +10,61 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- *
- */
 @Service
 public class SeckillService {
 
-    @Autowired
-    GoodsService goodsService;
+    private final GoodsService goodsService;
+    private final OrderService orderService;
+    private final RedisService redisService;
 
     @Autowired
-    OrderService orderService;
+    public SeckillService(GoodsService goodsService, OrderService orderService, RedisService redisService) {
+        this.goodsService = goodsService;
+        this.orderService = orderService;
+        this.redisService = redisService;
+    }
 
-    @Autowired
-    RedisService redisService;
-
-    //保证这三个操作，减库存 下订单 写入秒杀订单是一个事物
+    /**
+     * 减库存 下订单 写入秒杀订单<br>
+     * 保证这三个操作，是一个事务
+     */
     @Transactional
-    public OrderInfo seckill(User user, GoodsVO goods){
+    public OrderInfo seckill(User user, GoodsVO goods) {
         //减库存
         boolean success = goodsService.reduceStock(goods);
-        if (success){
+        if (success) {
             //下订单 写入秒杀订单
             return orderService.createOrder(user, goods);
-        }else {
+        } else {
             setGoodsOver(goods.getId());
             return null;
         }
     }
 
-    public long getSeckillResult(long userId, long goodsId){
+    /**
+     * 获取秒杀结果<br>
+     * order不为空，成功<br>
+     * 为空则判断秒杀状态
+     */
+    public long getSeckillResult(long userId, long goodsId) {
         SeckillOrder order = orderService.getOrderByUserIdGoodsId(userId, goodsId);
-        if (order != null){
+        if (order != null) {
             return order.getOrderId();
-        }else{
+        } else {
             boolean isOver = getGoodsOver(goodsId);
-            if(isOver) {
-                return -1;
-            }else {
-                return 0;
+            if (isOver) {
+                return -1; // 秒杀结束
+            } else {
+                return 0; // 秒杀进行中
             }
         }
     }
 
     private void setGoodsOver(Long goodsId) {
-        redisService.set(SeckillKey.isGoodsOver, ""+goodsId, true);
+        redisService.set(SeckillKey.isGoodsOver, "" + goodsId, true);
     }
 
     private boolean getGoodsOver(long goodsId) {
-        return redisService.exists(SeckillKey.isGoodsOver, ""+goodsId);
+        return redisService.exists(SeckillKey.isGoodsOver, "" + goodsId);
     }
 }

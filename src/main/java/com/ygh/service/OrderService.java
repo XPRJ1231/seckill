@@ -27,7 +27,7 @@ public class OrderService {
 
     public SeckillOrder getOrderByUserIdGoodsId(long userId, long goodsId) {
         return redisService.get(OrderKey.getSeckillOrderByUserIdGoodId, userId + "_" + goodsId, SeckillOrder.class);
-        //"OrderKey:seckill18181818181_1"
+
     }
 
     public OrderInfo getOrderById(long orderId) {

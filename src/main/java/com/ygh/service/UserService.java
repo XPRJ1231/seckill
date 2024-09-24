@@ -16,29 +16,33 @@ import org.springframework.stereotype.Service;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
 
-/**
- * Created by jiangyunxiong on 2018/5/22.
- */
 @Service
 public class UserService {
 
-    @Autowired
-    UserMapper userMapper;
+    private UserMapper userMapper;
+    private RedisService redisService;
 
     @Autowired
-    RedisService redisService;
+    public void setUserMapper(UserMapper userMapper, RedisService redisService) {
+        this.userMapper = userMapper;
+        this.redisService = redisService;
+    }
+
 
     public static final String COOKIE_NAME_TOKEN = "token";
 
+    /**
+     * 缓存中查询，缓存中没有再去数据库中查询并存入缓存
+     */
     public User getById(long id) {
-        //对象缓存
+
         User user = redisService.get(UserKey.getById, "" + id, User.class);
         if (user != null) {
             return user;
         }
-        //取数据库
+
         user = userMapper.getById(id);
-        //再存入缓存
+
         if (user != null) {
             redisService.set(UserKey.getById, "" + id, user);
         }
@@ -46,44 +50,54 @@ public class UserService {
     }
 
     /**
-     * 典型缓存同步场景：更新密码
+     * 典型缓存同步场景：更新密码<p>
+     * 根据id查询user<br>
+     * 更新数据库<br>
+     * 更新缓存（删除、插入）
      */
     public boolean updatePassword(String token, long id, String formPass) {
-        //取user
+
         User user = getById(id);
-        if(user == null) {
+        if (user == null) {
             throw new GlobalException(CodeMsg.MOBILE_NOT_EXIST);
         }
-        //更新数据库
+
         User toBeUpdate = new User();
         toBeUpdate.setId(id);
         toBeUpdate.setPassword(MD5Util.formPassToDBPass(formPass, user.getSalt()));
         userMapper.update(toBeUpdate);
-        //更新缓存：先删除再插入
-        redisService.delete(UserKey.getById, ""+id);
+
+        redisService.delete(UserKey.getById, "" + id);
         user.setPassword(toBeUpdate.getPassword());
         redisService.set(UserKey.token, token, user);
         return true;
     }
 
-    public String login(HttpServletResponse response, LoginVO loginVo) {
-        if (loginVo == null) {
+    /**
+     * 1.loginVO为空：服务端异常<br>
+     * 2.根据手机号查询user为空：手机号不存在<br>
+     * 3.验证密码加密后和存储的密码是否一致<br>
+     *
+     */
+    public String login(HttpServletResponse response, LoginVO loginVO) {
+        if (loginVO == null) {
             throw new GlobalException(CodeMsg.SERVER_ERROR);
         }
-        String mobile = loginVo.getMobile();
-        String formPass = loginVo.getPassword();
-        //判断手机号是否存在
+        String mobile = loginVO.getMobile();
+        String formPass = loginVO.getPassword();
+
         User user = getById(Long.parseLong(mobile));
         if (user == null) {
             throw new GlobalException(CodeMsg.MOBILE_NOT_EXIST);
         }
-        //验证密码
+
         String dbPass = user.getPassword();
         String saltDB = user.getSalt();
         String calcPass = MD5Util.formPassToDBPass(formPass, saltDB);
         if (!calcPass.equals(dbPass)) {
             throw new GlobalException(CodeMsg.PASSWORD_ERROR);
         }
+
         //生成唯一id作为token
         String token = UUIDUtil.uuid();
         addCookie(response, token, user);

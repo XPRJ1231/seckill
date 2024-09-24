@@ -71,7 +71,7 @@ public class SeckillController implements InitializingBean {
     public Result<Integer> list(Model model, User user, @RequestParam("goodsId") long goodsId) {
 
         if (!rateLimiter.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
-            return  Result.error(CodeMsg.ACCESS_LIMIT_REACHED);
+            return Result.error(CodeMsg.ACCESS_LIMIT_REACHED);
         }
 
         if (user == null) {
@@ -88,7 +88,7 @@ public class SeckillController implements InitializingBean {
         if (stock < 0) {
             afterPropertiesSet();
             long stock2 = redisService.decr(GoodsKey.getGoodsStock, "" + goodsId);//10
-            if(stock2 < 0){
+            if (stock2 < 0) {
                 localOverMap.put(goodsId, true);
                 return Result.error(CodeMsg.SECKILL_OVER);
             }
@@ -111,7 +111,7 @@ public class SeckillController implements InitializingBean {
      */
     @Override
     public void afterPropertiesSet() {
-        List<GoodsVO> goodsVOList = goodsService.listGoodsVo();
+        List<GoodsVO> goodsVOList = goodsService.listGoodsVO();
         if (goodsVOList == null) {
             return;
         }

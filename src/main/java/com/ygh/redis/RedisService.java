@@ -16,7 +16,11 @@ public class RedisService {
     JedisPool jedisPool;
 
     /**
-     * 从redis连接池获取redis实例
+     * 从redis连接池获取redis实例<br>
+     * 根据查询redis中存储的键对应的Java对象
+     * @param prefix 前缀
+     * @param key key
+     * @param clazz 对象类型
      */
     public <T> T get(KeyPrefix prefix, String key, Class<T> clazz) {
         //<T>表示这个方法是泛型方法，允许调用时指定具体类型

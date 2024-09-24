@@ -33,11 +33,11 @@ public class MQReceiver {
     }
 
     /**
-     * 从队列中接收到消息,转换为SeckillMessage对象<br>
-     * 提取user和goodsId<br>
-     * 通过goodsId查询商品信息goodsVO<br>
-     *
-     * */
+     * 从队列中接收到消息,转换为SeckillMessage对象，提取user和goodsId<br>
+     * 通过goodsId查询商品信息goodsVO，然后获取库存<br>
+     * 若库存大于0，判断重复秒杀<br>
+     * 完成秒杀（减库存 下订单 写入秒杀订单）
+     */
     @RabbitListener(queues = MQConfig.QUEUE) //监听队列的名称
     public void receive(String message) {
 
@@ -46,14 +46,15 @@ public class MQReceiver {
         User user = m.getUser();
         long goodsId = m.getGoodsId();
 
-        GoodsVO goodsVO = goodsService.getGoodsVoByGoodsId(goodsId);
+        GoodsVO goodsVO = goodsService.getGoodsVOByGoodsId(goodsId);
         int stock = goodsVO.getStockCount();
         if (stock <= 0) {
             return;
         }
 
-        //判断重复秒杀
+        //判断重复秒杀，返回秒杀订单
         SeckillOrder order = orderService.getOrderByUserIdGoodsId(user.getId(), goodsId);
+        //get("OrderKey:seckill18181818181_1")
         if (order != null) {
             return;
         }

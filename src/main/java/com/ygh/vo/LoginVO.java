@@ -7,14 +7,14 @@ import lombok.Setter;
 import javax.validation.constraints.NotNull;
 
 /**
- *
+ * 手机号+密码
  */
 @Setter
 @Getter
 public class LoginVO {
 
     @NotNull
-    @IsMobile  //因为框架没有校验手机格式注解，所以自己定义
+    @IsMobile  //自定义校验手机格式注解
     private String mobile;
 
     @NotNull

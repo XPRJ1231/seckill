@@ -20,23 +20,24 @@ public class GoodsService {
     /**
      * 查询商品列表
      */
-    public List<GoodsVO> listGoodsVo() {
+    public List<GoodsVO> listGoodsVO() {
         return goodsMapper.listGoodsVo();
     }
 
     /**
      * 根据id查询指定商品
      */
-    public GoodsVO getGoodsVoByGoodsId(long goodsId) {
+    public GoodsVO getGoodsVOByGoodsId(long goodsId) {
         return goodsMapper.getGoodsVoByGoodsId(goodsId);
     }
 
     /**
      * 减少库存，每次减一
+     * @return 是否成功
      */
     public boolean reduceStock(GoodsVO goods) {
         int numAttempts = 0;
-        int ret = 0;
+        int res = 0;
         SeckillGoods sg = new SeckillGoods();
         sg.setGoodsId(goods.getId());
         sg.setVersion(goods.getVersion());
@@ -44,14 +45,14 @@ public class GoodsService {
             numAttempts++;
             try {
                 sg.setVersion(goodsMapper.getVersionByGoodsId(goods.getId()));
-                ret = goodsMapper.reduceStockByVersion(sg);
+                res = goodsMapper.reduceStockByVersion(sg);
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            if (ret != 0)
+            if (res != 0) // 影响行数
                 break;
         } while (numAttempts < DEFAULT_MAX_RETRIES);
 
-        return ret > 0;
+        return res > 0;
     }
 }

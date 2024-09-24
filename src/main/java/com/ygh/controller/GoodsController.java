@@ -59,7 +59,7 @@ public class GoodsController {
         if (!StringUtils.isEmpty(html)) {
             return html;
         }
-        List<GoodsVO> goodsList = goodsService.listGoodsVo();
+        List<GoodsVO> goodsList = goodsService.listGoodsVO();
         model.addAttribute("user", user);
         model.addAttribute("goodsList", goodsList);
 
@@ -91,7 +91,7 @@ public class GoodsController {
         }
 
         //根据id查询商品详情
-        GoodsVO goods = goodsService.getGoodsVoByGoodsId(goodsId);
+        GoodsVO goods = goodsService.getGoodsVOByGoodsId(goodsId);
         model.addAttribute("goods", goods);
 
         long startTime = goods.getStartDate().getTime();
@@ -132,7 +132,7 @@ public class GoodsController {
     public Result<GoodsDetailVO> detail(HttpServletRequest request, HttpServletResponse response, Model model, User user, @PathVariable("goodsId") long goodsId) {
 
         //根据id查询商品详情
-        GoodsVO goods = goodsService.getGoodsVoByGoodsId(goodsId);
+        GoodsVO goods = goodsService.getGoodsVOByGoodsId(goodsId);
         model.addAttribute("goods", goods);
 
         long startTime = goods.getStartDate().getTime();
