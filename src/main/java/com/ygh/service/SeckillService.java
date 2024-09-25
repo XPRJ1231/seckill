@@ -25,6 +25,7 @@ public class SeckillService {
     }
 
     /**
+     * 秒杀<p>
      * 减库存 下订单 写入秒杀订单<br>
      * 保证这三个操作，是一个事务
      */
@@ -44,7 +45,8 @@ public class SeckillService {
     /**
      * 获取秒杀结果<br>
      * order不为空，成功<br>
-     * 为空则判断秒杀状态
+     * 为空则判断秒杀状态<br>
+     * -1：秒杀失败；0：秒杀进行中
      */
     public long getSeckillResult(long userId, long goodsId) {
         SeckillOrder order = orderService.getOrderByUserIdGoodsId(userId, goodsId);
@@ -53,7 +55,7 @@ public class SeckillService {
         } else {
             boolean isOver = getGoodsOver(goodsId);
             if (isOver) {
-                return -1; // 秒杀结束
+                return -1; // 秒杀失败
             } else {
                 return 0; // 秒杀进行中
             }

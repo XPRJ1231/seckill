@@ -21,7 +21,7 @@ public class GoodsService {
      * 查询商品列表
      */
     public List<GoodsVO> listGoodsVO() {
-        return goodsMapper.listGoodsVo();
+        return goodsMapper.listGoodsVO();
     }
 
     /**

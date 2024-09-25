@@ -48,57 +48,62 @@ public class SeckillController implements InitializingBean {
         this.sender = sender;
     }
 
-    //基于令牌桶算法的限流实现类
     RateLimiter rateLimiter = RateLimiter.create(10);
+    //基于令牌桶算法的限流实现类
 
-    //做标记，判断该商品是否被处理过了
     private final HashMap<Long, Boolean> localOverMap = new HashMap<Long, Boolean>();
+    //用来做标记，判断该商品是否被处理过了
 
     /**
-     * GET POST
-     * 1、GET幂等,服务端获取数据，无论调用多少次结果都一样
-     * 2、POST，向服务端提交数据，不是幂等
-     * <p>
+     * 先使用RateLimiter实现限流<br>
+     * 1.判断本地是否已标记，<br>
+     * 2.预减库存，标记商品已处理
+     * 3.
      * 将同步下单改为异步下单
      *
-     * @param model
-     * @param user
-     * @param goodsId
-     * @return
+     * @param model g
+     * @param user h
+     * @param goodsId h
+     * @return g
      */
     @RequestMapping(value = "/do_seckill", method = RequestMethod.POST)
     @ResponseBody
     public Result<Integer> list(Model model, User user, @RequestParam("goodsId") long goodsId) {
 
-        if (!rateLimiter.tryAcquire(1000, TimeUnit.MILLISECONDS)) {
-            return Result.error(CodeMsg.ACCESS_LIMIT_REACHED);
+        if (!rateLimiter.tryAcquire(1, TimeUnit.SECONDS)) { // tryAcquire方法：获取指定数量的许可（默认1个），并且在指定的时间内（1000毫秒）等待。如果在这个时间内成功获取到许可，方法返回 true；如果未能获取到许可，则返回 false。
+            return Result.error(CodeMsg.ACCESS_LIMIT_REACHED); // "访问高峰期，请稍等！"
         }
 
         if (user == null) {
-            return Result.error(CodeMsg.SESSION_ERROR);
+            return Result.error(CodeMsg.SESSION_ERROR); // "Session不存在或者已经失效"
         }
         model.addAttribute("user", user);
+        //将数据从控制器传递到视图，使得视图能够动态地展示这些数据。Spring MVC中实现数据传递和视图渲染的重要机制。
+
         //内存标记，减少redis访问
         boolean over = localOverMap.get(goodsId);
         if (over) {
-            return Result.error(CodeMsg.SECKILL_OVER);
+            return Result.error(CodeMsg.SECKILL_OVER); // "商品已经秒杀完毕"
         }
-        //预减库存
-        long stock = redisService.decr(GoodsKey.getGoodsStock, "" + goodsId);//10
+
+        //TODO：双写不一致问题
+        long stock = redisService.decr(GoodsKey.getGoodsStock, "" + goodsId);
         if (stock < 0) {
-            afterPropertiesSet();
-            long stock2 = redisService.decr(GoodsKey.getGoodsStock, "" + goodsId);//10
+            afterPropertiesSet(); // 如果redis显示库存不足，重新初始化商品库存（从数据库中加载商品的库存信息）。
+            long stock2 = redisService.decr(GoodsKey.getGoodsStock, "" + goodsId);
             if (stock2 < 0) {
-                localOverMap.put(goodsId, true);
-                return Result.error(CodeMsg.SECKILL_OVER);
+                localOverMap.put(goodsId, true); // 标记该商品已经处理
+                return Result.error(CodeMsg.SECKILL_OVER); // "商品已经秒杀完毕"
             }
         }
+
         //判断重复秒杀
         SeckillOrder order = orderService.getOrderByUserIdGoodsId(user.getId(), goodsId);
         if (order != null) {
-            return Result.error(CodeMsg.REPEAT_SECKILL);
+            return Result.error(CodeMsg.REPEAT_SECKILL); // "不能重复秒杀"
         }
-        //入队
+
+        //入队，异步下单
         SeckillMessage message = new SeckillMessage();
         message.setUser(user);
         message.setGoodsId(goodsId);

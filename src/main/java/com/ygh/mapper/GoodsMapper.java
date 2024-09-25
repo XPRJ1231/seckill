@@ -13,7 +13,7 @@ import java.util.List;
 public interface GoodsMapper {
 
     @Select("select g.*, sg.stock_count, sg.start_date, sg.end_date, sg.seckill_price, sg.version from sk_goods_seckill sg left join sk_goods g on sg.goods_id = g.id")
-    public List<GoodsVO> listGoodsVo();
+    public List<GoodsVO> listGoodsVO();
 
     @Select("select g.*, sg.stock_count, sg.start_date, sg.end_date, sg.seckill_price, sg.version  from sk_goods_seckill sg left join sk_goods g  on sg.goods_id = g.id where g.id = #{goodsId}")
     public GoodsVO getGoodsVoByGoodsId(@Param("goodsId") long goodsId);
